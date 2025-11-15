@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindCare - Online Therapy Platform</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neubrutalism {
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0px #000;
+            transition: all 0.2s ease;
+        }
+        .neubrutalism:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px #000;
+        }
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-[#F4EDE4]">
+    <div id="app">
+        <!-- Loading Animation -->
+        <div class="loading" :class="{ active: loading }">
+            <div class="neubrutalism bg-white p-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="bg-[#9FD8E3] p-4 mb-8">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold neubrutalism bg-white px-4 py-2">MindCare</h1>
+                <div class="space-x-4">
+                    <button @click="currentView = 'login'" class="neubrutalism bg-[#FFB6D9] px-4 py-2" v-if="!isLoggedIn">Login</button>
+                    <button @click="currentView = 'signup'" class="neubrutalism bg-[#F2EF96] px-4 py-2" v-if="!isLoggedIn">Sign Up</button>
+                    <button @click="logout" class="neubrutalism bg-white px-4 py-2" v-if="isLoggedIn">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container mx-auto px-4">
+            <!-- Login Form -->
+            <div v-if="currentView === 'login'" class="max-w-md mx-auto">
+                <div class="neubrutalism bg-white p-8">
+                    <h2 class="text-2xl font-bold mb-6">Login</h2>
+                    <form @submit.prevent="handleLogin" class="space-y-4">
+                        <div>
+                            <label class="block mb-2">Email</label>
+                            <input type="email" v-model="loginForm.email" required class="neubrutalism w-full p-2">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Password</label>
+                            <input type="password" v-model="loginForm.password" required class="neubrutalism w-full p-2">
+                        </div>
+                        <button type="submit" class="neubrutalism bg-[#9FD8E3] w-full p-2">Login</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div v-if="currentView === 'signup'" class="max-w-md mx-auto">
+                <div class="neubrutalism bg-white p-8">
+                    <h2 class="text-2xl font-bold mb-6">Sign Up</h2>
+                    <form @submit.prevent="handleSignup" class="space-y-4">
+                        <div>
+                            <label class="block mb-2">Name</label>
+                            <input type="text" v-model="signupForm.name" required class="neubrutalism w-full p-2">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Email</label>
+                            <input type="email" v-model="signupForm.email" required class="neubrutalism w-full p-2">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Password</label>
+                            <input type="password" v-model="signupForm.password" required class="neubrutalism w-full p-2">
+                        </div>
+                        <div>
+                            <label class="block mb-2">Role</label>
+                            <select v-model="signupForm.role" required class="neubrutalism w-full p-2">
+                                <option value="client">Client</option>
+                                <option value="therapist">Therapist</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="neubrutalism bg-[#F2EF96] w-full p-2">Sign Up</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Dashboard -->
+            <div v-if="isLoggedIn && currentView === 'dashboard'" class="grid md:grid-cols-2 gap-8">
+                <!-- Left Column -->
+                <div class="space-y-8">
+                    <!-- Profile Section -->
+                    <div class="neubrutalism bg-white p-6">
+                        <h2 class="text-xl font-bold mb-4">Welcome, {{user.name}}!</h2>
+                        <p class="mb-2">Role: {{user.role}}</p>
+                        <p>Email: {{user.email}}</p>
+                    </div>
+
+                    <!-- Appointments -->
+                    <div class="neubrutalism bg-white p-6">
+                        <h2 class="text-xl font-bold mb-4">Upcoming Appointments</h2>
+                        <div v-if="appointments.length === 0" class="text-gray-500">No upcoming appointments</div>
+                        <div v-for="appointment in appointments" :key="appointment.id" class="neubrutalism bg-[#F2EF96] p-4 mb-4">
+                            <p class="font-bold">{{appointment.date}}</p>
+                            <p>{{appointment.therapistName}}</p>
+                            <button @click="joinSession(appointment.id)" class="neubrutalism bg-[#9FD8E3] px-4 py-2 mt-2">Join Session</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-8">
+                    <!-- Book Appointment -->
+                    <div class="neubrutalism bg-white p-6">
+                        <h2 class="text-xl font-bold mb-4">Book New Appointment</h2>
+                        <form @submit.prevent="bookAppointment" class="space-y-4">
+                            <div>
+                                <label class="block mb-2">Select Therapist</label>
+                                <select v-model="bookingForm.therapist" required class="neubrutalism w-full p-2">
+                                    <option v-for="therapist in therapists" :key="therapist.id" :value="therapist.id">
+                                        {{therapist.name}} - {{therapist.specialization}}
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block mb-2">Date & Time</label>
+                                <input type="datetime-local" v-model="bookingForm.datetime" required class="neubrutalism w-full p-2">
+                            </div>
+                            <button type="submit" class="neubrutalism bg-[#FFB6D9] w-full p-2">Book Appointment</button>
+                        </form>
+                    </div>
+
+                    <!-- Resources -->
+                    <div class="neubrutalism bg-white p-6">
+                        <h2 class="text-xl font-bold mb-4">Mental Health Resources</h2>
+                        <div class="space-y-4">
+                            <a href="#" v-for="resource in resources" :key="resource.id" 
+                               class="neubrutalism block bg-[#F2EF96] p-4">
+                                <h3 class="font-bold">{{resource.title}}</h3>
+                                <p class="text-sm">{{resource.description}}</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    currentView: 'login',
+                    loading: false,
+                    isLoggedIn: false,
+                    user: {
+                        name: '',
+                        email: '',
+                        role: ''
+                    },
+                    loginForm: {
+                        email: '',
+                        password: ''
+                    },
+                    signupForm: {
+                        name: '',
+                        email: '',
+                        password: '',
+                        role: 'client'
+                    },
+                    bookingForm: {
+                        therapist: '',
+                        datetime: ''
+                    },
+                    appointments: [],
+                    therapists: [
+                        { id: 1, name: 'Dr. Sarah Johnson', specialization: 'Anxiety & Depression' },
+                        { id: 2, name: 'Dr. Michael Chen', specialization: 'Relationship Counseling' },
+                    ],
+                    resources: [
+                        { id: 1, title: 'Understanding Anxiety', description: 'A comprehensive guide to managing anxiety' },
+                        { id: 2, title: 'Meditation Basics', description: 'Learn the fundamentals of meditation' },
+                        { id: 3, title: 'Stress Management', description: 'Effective techniques for stress relief' }
+                    ]
+                }
+            },
+            methods: {
+                async handleLogin(e) {
+                    this.loading = true;
+                    // Simulate API call
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    this.isLoggedIn = true;
+                    this.user = {
+                        name: 'John Doe',
+                        email: this.loginForm.email,
+                        role: 'client'
+                    };
+                    this.currentView = 'dashboard';
+                    this.loading = false;
+                },
+                async handleSignup(e) {
+                    this.loading = true;
+                    // Simulate API call
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    this.isLoggedIn = true;
+                    this.user = {
+                        name: this.signupForm.name,
+                        email: this.signupForm.email,
+                        role: this.signupForm.role
+                    };
+                    this.currentView = 'dashboard';
+                    this.loading = false;
+                },
+                async bookAppointment() {
+                    this.loading = true;
+                    // Simulate API call
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    this.appointments.push({
+                        id: Date.now(),
+                        date: new Date(this.bookingForm.datetime).toLocaleString(),
+                        therapistName: this.therapists.find(t => t.id === this.bookingForm.therapist)?.name
+                    });
+                    this.bookingForm.therapist = '';
+                    this.bookingForm.datetime = '';
+                    this.loading = false;
+                },
+                async joinSession(appointmentId) {
+                    this.loading = true;
+                    // Simulate video call initialization
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    alert('Joining video session...');
+                    this.loading = false;
+                },
+                logout() {
+                    this.isLoggedIn = false;
+                    this.currentView = 'login';
+                    this.user = { name: '', email: '', role: '' };
+                }
+            }
+        }).mount('#app')
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
